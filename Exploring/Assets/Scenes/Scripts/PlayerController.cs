@@ -27,7 +27,7 @@ public class PlayerController : MonoBehaviour {
 
     void OnTriggerEnter(Collider other)
     {
-        if(other.gameObject.tag == "Pick up")
+        if(other.gameObject.tag == "PickUp")
         {
             other.gameObject.SetActive(false);
             count += 1;
