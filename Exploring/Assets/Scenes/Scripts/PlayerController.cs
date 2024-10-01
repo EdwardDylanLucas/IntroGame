@@ -22,7 +22,7 @@ public class PlayerController : MonoBehaviour {
     public TextMeshProUGUI ClosestPickUp;
     private LineRenderer lineRenderer;
     private enum DebugMode { Normal, Distance, Vision }
-    private DebugMode currentMode = DebugMode.Distance;
+    private DebugMode currentMode = DebugMode.Normal;
 
     void Start()
     {
@@ -44,11 +44,13 @@ public class PlayerController : MonoBehaviour {
 
     private void FixedUpdate()
     {
+        oldPosition = player.transform.position;
         Vector3 movement = new Vector3(moveValue.x, 0.0f, moveValue.y);
         GetComponent<Rigidbody>().AddForce(movement * speed * Time.fixedDeltaTime);
+
     }
 
-    private void Update()
+    void Update()
     {
         HandleDebugModeSwitch();
 
@@ -66,6 +68,10 @@ public class PlayerController : MonoBehaviour {
                 UpdateDistanceMode();
                 break;
             case DebugMode.Vision:
+                PlayerPosition.text = "";
+                PlayerVelocity.text = "";
+                PlayerSpeed.text = "";
+                ClosestPickUp.text = "";
                 UpdateVisionMode();
                 break;
         }
@@ -123,8 +129,6 @@ public class PlayerController : MonoBehaviour {
         Vector3 velocity = (currentPosition - oldPosition) / Time.deltaTime;
         float speed = velocity.magnitude;
 
-        oldPosition = currentPosition;
-
         PlayerPosition.text = "Player position: " + currentPosition.ToString();
         PlayerVelocity.text = "Player velocity: " + velocity.ToString();
         PlayerSpeed.text = "Player speed: " + speed.ToString();
@@ -144,6 +148,7 @@ public class PlayerController : MonoBehaviour {
         }
         else
         {
+            lineRenderer.positionCount = 0;
             ClosestPickUp.text = "No active PickUps found.";
         }
     }
@@ -184,11 +189,6 @@ public class PlayerController : MonoBehaviour {
         {
             targetedPickup.GetComponent<Renderer>().material.color = Color.green;
             targetedPickup.transform.LookAt(transform.position);
-
-            PlayerPosition.text = "Player position: " + transform.position.ToString();
-            PlayerVelocity.text = "Player velocity: " + velocity.ToString();
-            PlayerSpeed.text = "Player speed: " + speed.ToString();
-            ClosestPickUp.text = "Targeted PickUp: " + closestAngle.ToString();
         }
     }
 
