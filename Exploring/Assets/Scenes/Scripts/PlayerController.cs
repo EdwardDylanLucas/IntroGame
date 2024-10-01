@@ -21,6 +21,8 @@ public class PlayerController : MonoBehaviour {
     public TextMeshProUGUI PlayerSpeed;
     public TextMeshProUGUI ClosestPickUp;
     private LineRenderer lineRenderer;
+    private enum DebugMode { Normal, Distance, Vision }
+    private DebugMode currentMode = DebugMode.Distance;
 
     void Start()
     {
@@ -48,16 +50,35 @@ public class PlayerController : MonoBehaviour {
 
     private void Update()
     {
-        Vector3 currentPosition = player.transform.position;
-        Vector3 velocity = (currentPosition - oldPosition) / Time.deltaTime;
-        float speed = velocity.magnitude;
+        HandleDebugModeSwitch();
 
-        oldPosition = currentPosition;
+        switch (currentMode)
+        {
+            case DebugMode.Normal:
+                PlayerPosition.text = "";
+                PlayerVelocity.text = "";
+                PlayerSpeed.text = "";
+                ClosestPickUp.text = "";
+                lineRenderer.enabled = false;
+                ResetPickupsToWhite();
+                break;
+            case DebugMode.Distance:
+                UpdateDistanceMode();
+                break;
+            case DebugMode.Vision:
+                UpdateVisionMode();
+                break;
+        }
+        //Vector3 currentPosition = player.transform.position;
+        //Vector3 velocity = (currentPosition - oldPosition) / Time.deltaTime;
+        //float speed = velocity.magnitude;
 
-        PlayerPosition.text = "Player position: " + currentPosition.ToString();
-        PlayerVelocity.text = "Player velocity: " + velocity.ToString();
-        PlayerSpeed.text = "Player speed: " + speed.ToString();
-        UpdateClosestPickUp();
+        //oldPosition = currentPosition;
+
+        //PlayerPosition.text = "Player position: " + currentPosition.ToString();
+        //PlayerVelocity.text = "Player velocity: " + velocity.ToString();
+        //PlayerSpeed.text = "Player speed: " + speed.ToString();
+        //UpdateClosestPickUp();
     }
 
     void OnTriggerEnter(Collider other)
@@ -79,7 +100,15 @@ public class PlayerController : MonoBehaviour {
         }
     }
 
-    void UpdateClosestPickUp()
+    void HandleDebugModeSwitch()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            currentMode = (DebugMode)(((int)currentMode + 1) % 3);
+        }
+    }
+
+    void UpdateDistanceMode()
     {
         float closestDistance = Mathf.Infinity;
         GameObject closestPickUp = null;
@@ -103,6 +132,17 @@ public class PlayerController : MonoBehaviour {
             }
         }
 
+        Vector3 currentPosition = player.transform.position;
+        Vector3 velocity = (currentPosition - oldPosition) / Time.deltaTime;
+        float speed = velocity.magnitude;
+
+        oldPosition = currentPosition;
+
+        PlayerPosition.text = "Player position: " + currentPosition.ToString();
+        PlayerVelocity.text = "Player velocity: " + velocity.ToString();
+        PlayerSpeed.text = "Player speed: " + speed.ToString();
+        lineRenderer.enabled = true;
+
         // If a closest pickup was found, highlight it and update the text
         if (closestPickUp != null)
         {
@@ -119,6 +159,69 @@ public class PlayerController : MonoBehaviour {
         else
         {
             ClosestPickUp.text = "No active PickUps found.";
+        }
+    }
+
+    void UpdateVisionMode()
+    {
+        // Calculate player velocity
+        Vector3 currentPosition = player.transform.position;
+        Vector3 velocity = (currentPosition - oldPosition) / Time.deltaTime;
+        float speed = velocity.magnitude;
+
+        // Set line renderer for the velocity vector
+        lineRenderer.enabled = true;
+        lineRenderer.SetPosition(0, transform.position);
+        lineRenderer.SetPosition(1, transform.position + velocity);
+
+        // Find the pickup the player is moving towards
+        GameObject targetedPickup = null;
+        float closestAngle = Mathf.Infinity;
+
+        foreach (GameObject pickUp in pickUps)
+        {
+            if (pickUp.activeInHierarchy)
+            {
+                // Calculate the direction to the pickup
+                Vector3 directionToPickup = (pickUp.transform.position - transform.position).normalized;
+
+                // Calculate the angle between the player's velocity direction and the direction to the pickup
+                float angle = Vector3.Angle(velocity, directionToPickup);
+
+                // The smaller the angle, the more directly the player is moving towards this pickup
+                if (angle < closestAngle)
+                {
+                    closestAngle = angle;
+                    targetedPickup = pickUp;
+                }
+
+                // Reset all pickups to white and continue rotating
+                pickUp.GetComponent<Renderer>().material.color = Color.white;
+                pickUp.transform.Rotate(Vector3.up * Time.deltaTime * 45); // Continue rotating
+            }
+        }
+
+        // Highlight the targeted pickup and make it face the player
+        if (targetedPickup != null)
+        {
+            targetedPickup.GetComponent<Renderer>().material.color = Color.green;
+            targetedPickup.transform.LookAt(transform.position); // Make the green pickup face the player
+
+            PlayerPosition.text = "Player position: " + transform.position.ToString();
+            PlayerVelocity.text = "Player velocity: " + velocity.ToString();
+            PlayerSpeed.text = "Player speed: " + speed.ToString();
+            ClosestPickUp.text = "Targeted PickUp: " + closestAngle.ToString();
+        }
+    }
+
+    void ResetPickupsToWhite()
+    {
+        foreach (GameObject pickUp in pickUps)
+        {
+            if (pickUp.activeInHierarchy)
+            {
+                pickUp.GetComponent<Renderer>().material.color = Color.white;
+            }
         }
     }
 
